@@ -1,25 +1,33 @@
+using Microsoft.EntityFrameworkCore;
+using orders_api.Data;
+using orders_api.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddDbContext<DbManager>(options =>
+    options.UseInMemoryDatabase("OrdersDb"));
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.MapGet("/orders", async (DbManager db) => await db.Orders.ToListAsync());
 
-app.UseAuthorization();
+app.MapGet("/orders/{id}", async (DbManager db, Guid id) => await db.Orders.FindAsync(id));
 
-app.MapControllers();
+app.MapPost("/orders/create", async (Order order, DbManager db) =>
+{
+    db.Orders.Add(order);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/orders{order.Id}", order);
+});
 
 app.Run();
